@@ -1,0 +1,90 @@
+require 'rockset'
+require 'colorize'
+require 'json'
+
+$query = ''
+
+def input
+    begin
+        print 'RockSQL-1.1$ '
+        begin
+            line = gets
+        rescue Interrupt
+            puts
+            input
+        end
+        line[line[-1]] = ''
+
+        if line[-1] == ';'
+            $query.slice! ';'
+            if $query != ''
+                line = ' ' + line
+            end
+            $query = $query + line
+            if $query.include? '"'
+                puts 'QueryError'.yellow + ': \'"\' in query'
+                input
+            end
+            Rockset.auth(api_key=ENV['ROCKSET_TOKEN'], server=ENV['ROCKSET_SERVER'] || 'api.rs2.usw2.rockset.com')
+            result = Rockset.query($query)
+            if result['message']
+                if result['type'] == 'QueryError'
+                    err_location = ' Line: ' + result['line'].to_s + ' Column: ' + result['column'].to_s
+                else
+                    err_location = ''
+                end
+                err_msg = result['type'].yellow + ': ' + result['message'] + err_location
+                puts err_msg
+                $last_result = err_msg
+            else
+                query_results = JSON.pretty_generate result['results']
+                puts query_results
+                $last_result = query_results
+            end
+            $last_query = $query
+            $query = ''
+        elsif line == 'help'
+            puts
+            puts 'RockSQL: A complete Rockset SQL shell.'.green
+            puts 'Version: 1.1'
+            puts 'Guide: ' + 'http://gadhagod.github.io/RockSQL'.underline
+            puts
+        elsif line == 'clear'
+            system 'clear'
+        elsif line == 'reset'
+            $query = ''
+        elsif line == 'exit'
+            abort
+        elsif line == 'staged'
+            puts $query
+        elsif line == 'last query'
+            puts $last_query
+        elsif line == 'last res' || line == 'last result'
+            puts $last_result
+        elsif line == 'last restage'
+            $query = $last_query
+        elsif line.start_with? 'last save'
+            line.slice! 'last save '
+            if line == '' || line == 'last save'
+                puts 'InvalidFile'.yellow + ': You need to specify a valid filename'
+                input
+            end
+            File.open(line, 'w') { 
+                |file| file.write $last_result
+            }
+        elsif line == ''
+        else
+            if $query != ''
+                line = ' ' + line
+            end
+            $query = $query + line
+        end
+        input
+    rescue => error
+        puts 'RubyError: '.red + error.class.to_s + ': ' + error.message
+        $query = ''
+        input
+    end
+end
+
+input

@@ -1,0 +1,9 @@
+theme: jekyll-theme-slate
+title: "RockSQL"
+description: "A fully operational SQL shell for performing queries on your Rockset collections."
+
+author:
+    name: "Aarav Borthakur"
+    avatar: "https://avatars2.githubusercontent.com/u/69025547?s=460&u=14ad98a523c83e7a3e8a24711133286df7a1ab1f&v=4"
+    bio: "An 8th grader making all sorts of cool stuff"
+    github: "Aarav Borthakur"
