@@ -1,0 +1,59 @@
+#!/usr/bin/python3
+ 
+import readline
+from sys import argv
+from rockset import Q, Client
+from colorama import init as colorama, Fore, Style
+from rockset.exception import InputError, AuthError
+from os import getenv, system
+from json import dumps
+
+colorama(autoreset=True)
+
+api_key = argv[1] if len(argv) > 1 else getenv("ROCKSET_TOKEN")
+if not api_key: print(Fore.RED + "No API key. Set enviroment variable `ROCKSET_TOKEN` or use first command line arguemnt")
+
+api_server = argv[2] if len(argv) > 2 else getenv("ROCKSET_SERVER")
+
+rs = Client(api_key=api_key, api_server=api_server or "https://api.rs2.usw2.rockset.com")
+try: list(rs.sql(Q("SELECT 1")))
+except AuthError: 
+    print(Fore.RED + "Authentication failiure. Export env var `ROCKSET_TOKEN`.")
+    exit()
+
+while True:
+    try: 
+        inp = input("rsql-$ ")
+        if inp == "": 
+            continue
+        if inp == "clear" or inp == "cls": 
+            system("clear")
+            continue
+        if inp == "help":
+            print(""" 
+  ____                   _      ____     ___    _ 
+ |  _ \    ___     ___  | | __ / ___|   / _ \  | |
+ | |_) |  / _ \   / __| | |/ / \___ \  | | | | | |
+ |  _ <  | (_) | | (__  |   <   ___) | | |_| | | |___ 
+ |_| \_\  \___/   \___| |_|\_\ |____/   \__\_\ |_____|
+ """)
+            print(Fore.GREEN + " An SQL shell for executing Rockset queries.\n")
+            print(Style.BRIGHT + " EXAMPLE" + Style.RESET_ALL + ": `$ SELECT * FROM my_collection`")
+            print()
+            continue
+
+        if inp == "exit": exit()
+
+        # actual query
+        query = inp if inp[-1] != ">" else inp[:-1]
+        res = dumps(list(rs.sql(Q(query))), indent=4)
+        print(res)
+
+        if inp[-1] == ">":
+            open(input("Output file: "), "w+").write(res)
+
+    except InputError as err: print(Fore.RED + err.message)
+    except KeyboardInterrupt: print()
+    except EOFError: 
+        print()
+        exit()
